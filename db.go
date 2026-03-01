@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "modernc.org/sqlite"
 	_ "github.com/go-sql-driver/mysql"
+	_ "modernc.org/sqlite"
 )
 
 type MySQLCredentials struct {
@@ -53,7 +53,7 @@ func (d *DB) GetDB() *sql.DB {
 
 func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
 	go func() {
-		rows, err := d.db.Query(query, args)
+		rows, err := d.db.Query(query, args...)
 		if err != nil {
 			callback(nil, err)
 		} else {
@@ -80,7 +80,7 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 
 func (d *DB) Exec(callback func(sql.Result, error), query string, args ...any) {
 	go func() {
-		res, err := d.db.Exec(query, args)
+		res, err := d.db.Exec(query, args...)
 		callback(res, err)
 	}()
 }
