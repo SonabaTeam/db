@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "modernc.org/sqlite"
@@ -40,6 +41,16 @@ func newDatabase(driver string, dsn string) (*DB, error) {
 	if err2 := db.Ping(); err2 != nil {
 		return nil, err2
 	}
+	db.SetMaxIdleConns(20)
+	db.SetMaxOpenConns(200)
+	db.SetConnMaxLifetime(time.Hour)
+	go func() {
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			db.Ping()
+		}
+	}()
 	return &DB{db: db}, nil
 }
 
