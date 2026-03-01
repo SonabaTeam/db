@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -22,18 +23,20 @@ type SQLiteCredentials struct {
 }
 
 type DB struct {
-	db *sql.DB
+	db  *sql.DB
+	log *slog.Logger
 }
 
-func NewMySQL(credentials MySQLCredentials) (*DB, error) {
-	return newDatabase("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", credentials.Username, credentials.Password, credentials.Host, fmt.Sprint(credentials.Port), credentials.Database))
+func NewMySQL(credentials MySQLCredentials, log *slog.Logger) (*DB, error) {
+	return newDatabase("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", credentials.Username, credentials.Password, credentials.Host, fmt.Sprint(credentials.Port), credentials.Database), log)
 }
 
-func NewSQLite(credentials SQLiteCredentials) (*DB, error) {
-	return newDatabase("sqlite", fmt.Sprintf("file:%s", credentials.File))
+func NewSQLite(credentials SQLiteCredentials, log *slog.Logger) (*DB, error) {
+	return newDatabase("sqlite", fmt.Sprintf("file:%s", credentials.File), log)
 }
 
-func newDatabase(driver string, dsn string) (*DB, error) {
+func newDatabase(driver string, dsn string, log *slog.Logger) (*DB, error) {
+	log.Debug("Connecting database...")
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
 		return nil, err
@@ -41,6 +44,13 @@ func newDatabase(driver string, dsn string) (*DB, error) {
 	if err2 := db.Ping(); err2 != nil {
 		return nil, err2
 	}
+	log.Info("Successfully connected database")
+	var version string
+	err3 := db.QueryRow("SELECT VERSION()").Scan(&version)
+	if err3 != nil {
+		return nil, err3
+	}
+	log.Info("SQL Version: " + version)
 	db.SetMaxIdleConns(20)
 	db.SetMaxOpenConns(200)
 	db.SetConnMaxLifetime(time.Hour)
@@ -51,11 +61,18 @@ func newDatabase(driver string, dsn string) (*DB, error) {
 			db.Ping()
 		}
 	}()
-	return &DB{db: db}, nil
+	return &DB{db: db, log: log}, nil
 }
 
 func (d *DB) Close() error {
-	return d.db.Close()
+	d.log.Debug("Closing database...")
+	err := d.db.Close()
+	if err != nil {
+		d.log.Error("Failed close database: ", err.Error())
+	} else {
+		d.log.Info("Successfully disconnected database")
+	}
+	return err
 }
 
 func (d *DB) GetDB() *sql.DB {
