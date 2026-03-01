@@ -101,7 +101,11 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 				rows.Scan(ptrs...)
 				row := map[string]any{}
 				for i, col := range cols {
-					row[col] = values[i]
+					if b, ok := values[i].([]byte); ok {
+						row[col] = string(b)
+					} else {
+						row[col] = values[i]
+					}
 				}
 				result = append(result, row)
 			}
