@@ -5,7 +5,7 @@ Lightweight asynchronous SQL wrapper for Go with MySQL and SQLite support
 ## Features
 
 - Async execution using goroutines
-- Simple API: `Select` and `Exec`
+- Simple API: `ExecSelect` and `Exec`
 - Supports both MySQL and SQLite
 - Minimal dependencies, easy to integrate
 

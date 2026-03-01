@@ -42,9 +42,9 @@ func newDatabase(driver string, dsn string) (*DB, error) {
 	return &DB{db: db}, nil
 }
 
-func (d *DB) Select(query string, callback func([]map[string]any, error)) {
+func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
 	go func() {
-		rows, err := d.db.Query(query)
+		rows, err := d.db.Query(query, args)
 		if err != nil {
 			callback(nil, err)
 		} else {
@@ -69,9 +69,9 @@ func (d *DB) Select(query string, callback func([]map[string]any, error)) {
 	}()
 }
 
-func (d *DB) Exec(query string, callback func(sql.Result, error)) {
+func (d *DB) Exec(callback func(sql.Result, error), query string, args ...any) {
 	go func() {
-		res, err := d.db.Exec(query)
+		res, err := d.db.Exec(query, args)
 		callback(res, err)
 	}()
 }
