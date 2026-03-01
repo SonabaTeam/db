@@ -52,10 +52,12 @@ func (d *DB) GetDB() *sql.DB {
 }
 
 func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
+	done := make(chan struct{})
 	go func() {
 		rows, err := d.db.Query(query, args...)
 		if err != nil {
 			callback(nil, err)
+			close(done)
 		} else {
 			defer rows.Close()
 			cols, _ := rows.Columns()
@@ -74,13 +76,18 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 				result = append(result, row)
 			}
 			callback(result, nil)
+			close(done)
 		}
 	}()
+	<-done
 }
 
 func (d *DB) Exec(callback func(sql.Result, error), query string, args ...any) {
+	done := make(chan struct{})
 	go func() {
 		res, err := d.db.Exec(query, args...)
 		callback(res, err)
+		close(done)
 	}()
+	<-done
 }
