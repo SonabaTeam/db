@@ -45,12 +45,14 @@ func newDatabase(driver string, dsn string, log *slog.Logger) (*DB, error) {
 		return nil, err2
 	}
 	log.Info("Successfully connected database")
-	var version string
-	err3 := db.QueryRow("SELECT VERSION()").Scan(&version)
-	if err3 != nil {
-		return nil, err3
+	if driver == "mysql" {
+		var version string
+		err3 := db.QueryRow("SELECT VERSION()").Scan(&version)
+		if err3 != nil {
+			return nil, err3
+		}
+		log.Info("MySQL Version: " + version)
 	}
-	log.Info("SQL Version: " + version)
 	db.SetMaxIdleConns(20)
 	db.SetMaxOpenConns(200)
 	db.SetConnMaxLifetime(time.Hour)
