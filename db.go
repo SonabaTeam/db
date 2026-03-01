@@ -42,6 +42,14 @@ func newDatabase(driver string, dsn string) (*DB, error) {
 	return &DB{db: db}, nil
 }
 
+func (d *DB) Close() error {
+	return d.db.Close()
+}
+
+func (d *DB) GetDB() *sql.DB {
+	return d.db
+}
+
 func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
 	go func() {
 		rows, err := d.db.Query(query, args)
