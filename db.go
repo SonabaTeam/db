@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/SonabaTeam/dqueue"
 	_ "github.com/go-sql-driver/mysql"
 	_ "modernc.org/sqlite"
 )
@@ -82,14 +83,12 @@ func (d *DB) GetDB() *sql.DB {
 }
 
 func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
-	done := make(chan struct{})
-	go func() {
+	dqueue.Push(func() {
 		rows, err := d.db.Query(query, args...)
 		if err != nil {
 			if callback != nil {
 				callback(nil, err)
 			}
-			close(done)
 		} else {
 			defer rows.Close()
 			cols, _ := rows.Columns()
@@ -114,20 +113,15 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 			if callback != nil {
 				callback(result, nil)
 			}
-			close(done)
 		}
-	}()
-	<-done
+	}, 0*time.Second, false)
 }
 
 func (d *DB) Exec(callback func(sql.Result, error), query string, args ...any) {
-	done := make(chan struct{})
-	go func() {
+	dqueue.Push(func() {
 		res, err := d.db.Exec(query, args...)
 		if callback != nil {
 			callback(res, err)
 		}
-		close(done)
-	}()
-	<-done
+	}, 0*time.Second, false)
 }
