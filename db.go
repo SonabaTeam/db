@@ -83,12 +83,20 @@ func (d *DB) GetDB() *sql.DB {
 }
 
 func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, args ...any) {
+	if callback != nil {
+		res, err := d.execSelect(query, args...)
+		callback(res, err)
+	}
+}
+
+func (d *DB) execSelect(query string, args ...any) ([]map[string]any, error) {
+	var res []map[string]any
+	var errr error
 	dqueue.Push(func() {
 		rows, err := d.db.Query(query, args...)
 		if err != nil {
-			if callback != nil {
-				callback(nil, err)
-			}
+			res = nil
+			errr = err
 		} else {
 			defer rows.Close()
 			cols, _ := rows.Columns()
@@ -110,18 +118,30 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 				}
 				result = append(result, row)
 			}
-			if callback != nil {
-				callback(result, nil)
-			}
+			res = result
+			errr = nil
 		}
 	}, 0*time.Second, false)
+	return res, errr
 }
 
 func (d *DB) Exec(callback func(sql.Result, error), query string, args ...any) {
+	res, err := d.exec(query, args...)
+	if callback != nil {
+		callback(res, err)
+	}
+}
+
+func (d *DB) exec(query string, args ...any) (sql.Result, error) {
+	done := make(chan struct{})
+	var res sql.Result
+	var err error
+
 	dqueue.Push(func() {
-		res, err := d.db.Exec(query, args...)
-		if callback != nil {
-			callback(res, err)
-		}
+		res, err = d.db.Exec(query, args...)
+		close(done)
 	}, 0*time.Second, false)
+
+	<-done
+	return res, err
 }
