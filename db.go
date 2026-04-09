@@ -90,8 +90,10 @@ func (d *DB) ExecSelect(callback func([]map[string]any, error), query string, ar
 }
 
 func (d *DB) execSelect(query string, args ...any) ([]map[string]any, error) {
+	done := make(chan struct{})
 	var res []map[string]any
 	var errr error
+
 	dqueue.Push(func() {
 		rows, err := d.db.Query(query, args...)
 		if err != nil {
@@ -121,7 +123,10 @@ func (d *DB) execSelect(query string, args ...any) ([]map[string]any, error) {
 			res = result
 			errr = nil
 		}
+		close(done)
 	}, 0*time.Second, false)
+
+	<-done
 	return res, errr
 }
 
