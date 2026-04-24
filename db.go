@@ -94,7 +94,7 @@ func (d *DB) execSelect(query string, args ...any) ([]map[string]any, error) {
 	var res []map[string]any
 	var errr error
 
-	dqueue.Push(func() {
+	dqueue.PushFront(func() {
 		rows, err := d.db.Query(query, args...)
 		if err != nil {
 			res = nil
@@ -124,7 +124,7 @@ func (d *DB) execSelect(query string, args ...any) ([]map[string]any, error) {
 			errr = nil
 		}
 		close(done)
-	}, 0*time.Second, false)
+	})
 
 	<-done
 	return res, errr
@@ -142,10 +142,10 @@ func (d *DB) exec(query string, args ...any) (sql.Result, error) {
 	var res sql.Result
 	var err error
 
-	dqueue.Push(func() {
+	dqueue.PushFront(func() {
 		res, err = d.db.Exec(query, args...)
 		close(done)
-	}, 0*time.Second, false)
+	})
 
 	<-done
 	return res, err
